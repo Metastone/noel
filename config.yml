@@ -1,0 +1,25 @@
+# Names of all participants
+participants:
+  - Christian
+  - Claude
+  - Hugo
+  - Isabelle
+  - Jean
+  - Julien
+  - Lucie
+  - Marie
+  - Nicolas
+
+# The persons in the same group cannot exchange gifts between them
+forbidden_groups :
+  -
+    - Isabelle
+    - Hugo
+    - Nicolas
+    - Lucie
+  -
+    - Christian
+    - Marie
+  -
+    - Jean
+    - Claude
