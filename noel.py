@@ -2,6 +2,7 @@
 
 from random import *
 from schema import Schema, SchemaError
+from dataclasses import dataclass
 import time
 import yaml
 
@@ -14,26 +15,37 @@ class BadRandomSolutionException(Exception):
     pass
 
 
+@dataclass
+class Transaction:
+    """ Represent a association between a gift giver and a gift receiver """
+    giver: str
+    receiver: str
+
+
 def uses_forbidden_group(solution, groups):
-    for transaction in solution.items():
+    for transaction in solution:
         for group in groups:
-            if transaction[0] in group and transaction[1] in group:
+            if transaction.giver in group and transaction.receiver in group:
                 return True
     return False
 
 
 def is_forbidden_transaction(solution, forbidden_transactions):
-    for transaction in solution.items():
+    for transaction in solution:
         for forbidden_t in forbidden_transactions:
-            if transaction[0] == forbidden_t['giver'] and transaction[1] == forbidden_t['receiver']:
+            if transaction.giver == forbidden_t.giver and transaction.receiver == forbidden_t.receiver:
                 return True
     return False
 
 
 def try_generate_random_solution(participants):
+    """
+    Try to generate a random solution (list of Transaction(giver, receiver)), using a very basic algorithm.
+    It fails by raising an exception if at the end, the last giver can only give a gift to himself
+    """
     givers = set(participants)
     receivers = set(participants)
-    solution = {}
+    solution = []
     for giver in givers:
         potential_receivers = set(receivers)
         if giver in potential_receivers:
@@ -42,7 +54,7 @@ def try_generate_random_solution(participants):
             raise BadRandomSolutionException
         index = randrange(0, len(potential_receivers))
         receiver = list(potential_receivers)[index]
-        solution[giver] = receiver
+        solution += [Transaction(giver, receiver)]
         receivers.remove(receiver)
     return solution
 
@@ -65,14 +77,14 @@ def load_configuration():
     # Check that the names in forbidden groups and transactions are correct (to avoid spelling mistakes...)
     participants = config['participants']
     forbidden_groups = config['forbidden_groups']
-    forbidden_transactions = config['forbidden_transactions']
+    forbidden_transactions = [Transaction(t['giver'], t['receiver']) for t in config['forbidden_transactions']]
     for group in forbidden_groups:
         for name in group:
             if name not in participants:
                 raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden groups, '
                                          f'but this person is not one of the participants')
     for transaction in forbidden_transactions:
-        if transaction['giver'] not in participants or transaction['receiver'] not in participants:
+        if transaction.giver not in participants or transaction.receiver not in participants:
             raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden transactions, '
                                      f'but this person is not one of the participants')
 
@@ -94,10 +106,8 @@ def main():
             # random generation failed, we have to try again, nothing to do here
             pass
 
-    for transaction in solution.items():
-        giver = transaction[0].ljust(10, ' ')
-        receiver = transaction[1]
-        print(f'{giver} --> {receiver}')
+    for transaction in solution:
+        print(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
 
 
 if __name__ == '__main__':
