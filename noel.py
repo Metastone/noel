@@ -1,6 +1,8 @@
 #!/bin/python3
 import argparse
 import itertools
+import logging
+import sys
 from random import *
 from schema import Schema, SchemaError
 from dataclasses import dataclass
@@ -60,11 +62,11 @@ def try_generate_random_solution(participants):
     return solution
 
 
-def load_configuration():
+def load_configuration(config_file_path):
     """ Load the configuration from a YAML configuration file and return it """
 
     # Load YAML configuration file
-    config = yaml.safe_load(open('config.yml'))
+    config = yaml.safe_load(open(config_file_path))
 
     # Check that the format of the loaded configuration is correct
     config_schema = Schema({
@@ -87,20 +89,20 @@ def load_configuration():
         for name in group:
             if name not in participants:
                 raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden groups, '
-                                         f'but this person is not one of the participants')
+                                         f'but {name} is not a participant')
     for transaction in forbidden_transactions:
         if transaction.giver not in participants or transaction.receiver not in participants:
             raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden transactions, '
-                                     f'but this person is not one of the participants')
+                                     f'but {name} is not a participant')
 
     # If we reach this point, the configuration is valid
     return participants, forbidden_groups, forbidden_transactions
 
 
-def computes_solution(seed_for_rand):
+def computes_solution(rand_seed, config):
     """ Computes and return a valid solution, if it finds one """
-    (participants, forbidden_groups, forbidden_transactions) = load_configuration()
-    seed(seed_for_rand)
+    (participants, forbidden_groups, forbidden_transactions) = config
+    seed(rand_seed)
     valid_solution_found = False
     while not valid_solution_found:
         try:
@@ -115,12 +117,25 @@ def computes_solution(seed_for_rand):
 
 
 def get_arguments():
-    """ Parses arguments from command line """
+    """ Get the program arguments from command line """
     parser = argparse.ArgumentParser(description='Organize a gift exchange')
     parser.add_argument('--seed', type=int, help='Seed to use for random operations (integer).'
                                                  ' If not present, the current time is used.')
     args = parser.parse_args()
-    return args.seed if args.seed else time.time()
+
+    # Getting seed to use for random generation
+    if args.seed:
+        logging.info(f'Using the used-defined seed for random operations : {args.seed}')
+        rand_seed = args.seed
+    else:
+        rand_seed = time.time()
+        logging.info(f'Using the current time ({rand_seed}) as a seed for random operations')
+
+    # Getting configuration file path
+    config_file_path = 'config.yml'
+    logging.info(f'Using the configuration file {config_file_path}')
+
+    return rand_seed, config_file_path
 
 
 def main():
@@ -129,13 +144,15 @@ def main():
         taking into account some constraints given by the configuration
     """
     try:
-        seed_for_rand = get_arguments()
-        solution = computes_solution(seed_for_rand)
+        logging.basicConfig(format='%(levelname)s - %(message)s', stream=sys.stdout, level=logging.INFO)
+        (rand_seed, config_file_path) = get_arguments()
+        config = load_configuration(config_file_path)
+        solution = computes_solution(rand_seed, config)
         for transaction in solution:
-            print(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
+            logging.info(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
 
     except ChristmasException as ce:
-        print(f'ERROR : {ce}')
+        logging.error(ce)
 
 
 if __name__ == '__main__':
