@@ -148,6 +148,7 @@ def main():
         (rand_seed, config_file_path) = get_arguments()
         config = load_configuration(config_file_path)
         solution = computes_solution(rand_seed, config)
+        logging.info("********** SOLUTION FOUND **********")
         for transaction in solution:
             logging.info(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
 
