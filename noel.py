@@ -1,4 +1,5 @@
 #!/bin/python3
+import argparse
 import itertools
 from random import *
 from schema import Schema, SchemaError
@@ -96,10 +97,10 @@ def load_configuration():
     return participants, forbidden_groups, forbidden_transactions
 
 
-def computes_solution():
+def computes_solution(seed_for_rand):
     """ Computes and return a valid solution, if it finds one """
     (participants, forbidden_groups, forbidden_transactions) = load_configuration()
-    seed(time.time())
+    seed(seed_for_rand)
     valid_solution_found = False
     while not valid_solution_found:
         try:
@@ -113,15 +114,26 @@ def computes_solution():
     return solution
 
 
+def get_arguments():
+    """ Parses arguments from command line """
+    parser = argparse.ArgumentParser(description='Organize a gift exchange')
+    parser.add_argument('--seed', type=int, help='Seed to use for random operations (integer).'
+                                                 ' If not present, the current time is used.')
+    args = parser.parse_args()
+    return args.seed if args.seed else time.time()
+
+
 def main():
     """
         Assign to each participant another participant to whom he must give a gift,
         taking into account some constraints given by the configuration
     """
     try:
-        solution = computes_solution()
+        seed_for_rand = get_arguments()
+        solution = computes_solution(seed_for_rand)
         for transaction in solution:
             print(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
+
     except ChristmasException as ce:
         print(f'ERROR : {ce}')
 
