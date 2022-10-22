@@ -22,6 +22,14 @@ def uses_forbidden_group(solution, groups):
     return False
 
 
+def is_forbidden_transaction(solution, forbidden_transactions):
+    for transaction in solution.items():
+        for forbidden_t in forbidden_transactions:
+            if transaction[0] == forbidden_t['giver'] and transaction[1] == forbidden_t['receiver']:
+                return True
+    return False
+
+
 def try_generate_random_solution(participants):
     givers = set(participants)
     receivers = set(participants)
@@ -46,34 +54,42 @@ def load_configuration():
     # Check that the format of the configuration is correct
     config_schema = Schema({
         'participants': [str],
-        'forbidden_groups': [[str]]
+        'forbidden_groups': [[str]],
+        'forbidden_transactions': [{'giver': str, 'receiver': str}]
     })
     try:
         config_schema.validate(config)
     except SchemaError as se:
         raise ChristmasException(f'Bad configuration : {se}')
 
-    # Check that the names in 'forbidden groups' are correct (to avoid spelling mistakes...)
+    # Check that the names in forbidden groups and transactions are correct (to avoid spelling mistakes...)
     participants = config['participants']
     forbidden_groups = config['forbidden_groups']
+    forbidden_transactions = config['forbidden_transactions']
     for group in forbidden_groups:
         for name in group:
             if name not in participants:
                 raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden groups, '
                                          f'but this person is not one of the participants')
+    for transaction in forbidden_transactions:
+        if transaction['giver'] not in participants or transaction['receiver'] not in participants:
+            raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden transactions, '
+                                     f'but this person is not one of the participants')
 
     # If we reach this point, the configuration is valid
-    return config['participants'], config['forbidden_groups']
+    return participants, forbidden_groups, forbidden_transactions
 
 
 def main():
-    (participants, forbidden_groups) = load_configuration()
+    (participants, forbidden_groups, forbidden_transactions) = load_configuration()
     seed(time.time())
-    while True:
+    valid_solution_found = False
+    while not valid_solution_found:
         try:
             solution = try_generate_random_solution(participants)
-            if not uses_forbidden_group(solution, forbidden_groups):
-                break
+            if not uses_forbidden_group(solution, forbidden_groups) \
+                    and not is_forbidden_transaction(solution, forbidden_transactions):
+                valid_solution_found = True
         except BadRandomSolutionException:
             # random generation failed, we have to try again, nothing to do here
             pass

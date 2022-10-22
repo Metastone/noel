@@ -11,7 +11,7 @@ participants:
   - Nicolas
 
 # The persons in the same group cannot exchange gifts between them
-forbidden_groups :
+forbidden_groups:
   -
     - Isabelle
     - Hugo
@@ -23,3 +23,35 @@ forbidden_groups :
   -
     - Jean
     - Claude
+
+# Forbidden transaction, meaning a particular person cannot give to another particular person,
+# described as a list of couples (giver, receiver)
+forbidden_transactions:
+  # Forbid the same attributions as Christmas 2021
+  -
+    giver: Julien
+    receiver: Marie
+  -
+    giver: Lucie
+    receiver: Christian
+  -
+    giver: Christian
+    receiver: Nicolas
+  -
+    giver: Nicolas
+    receiver: Jean
+  -
+    giver: Isabelle
+    receiver: Julien
+  -
+    giver: Jean
+    receiver: Hugo
+  -
+    giver: Marie
+    receiver: Lucie
+  -
+    giver: Hugo
+    receiver: Claude
+  -
+    giver: Claude
+    receiver: Isabelle
