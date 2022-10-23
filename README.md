@@ -8,5 +8,5 @@ A highly advanced piece of software to organize a random gift exchange. Made ini
 # Dependencies
 
 - PyYAML (to load the program configuration)
-- "schema" python library (to validate the program configuration)
-
+- schema (to validate the program configuration)
+- tqdm (for progress bar)

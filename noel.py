@@ -2,68 +2,14 @@
 import argparse
 import itertools
 import logging
+import math
 import sys
-from random import *
+
+from tqdm import tqdm
 from schema import Schema, SchemaError
 from dataclasses import dataclass
 import time
 import yaml
-
-
-class ChristmasException(Exception):
-    pass
-
-
-class NoMorePotentialSolutionException(Exception):
-    pass
-
-
-@dataclass
-class Transaction:
-    """ Represent a association between a gift giver and a gift receiver """
-    giver: str
-    receiver: str
-
-
-def no_forbidden_group(solution, groups):
-    """ Return true if the solution is compliant with the 'forbidden groups' constraint """
-    for (transaction, group) in itertools.product(solution, groups):
-        if transaction.giver in group and transaction.receiver in group:
-            return False
-    return True
-
-
-def no_forbidden_transaction(solution, forbidden_transactions):
-    """ Return true if the solution is compliant with the 'forbidden transaction' constraint """
-    for (t, f_t) in itertools.product(solution, forbidden_transactions):
-        if t.giver == f_t.giver and t.receiver == f_t.receiver:
-            return False
-    return True
-
-
-def give_to_himself(solution):
-    """ Return true if a participant gives a gift to himself """
-    for transaction in solution:
-        if transaction.giver == transaction.receiver:
-            return True
-    return False
-
-
-def find_solution(it, config):
-    """
-        Look of a solution compliant with the given constraints, by iterating over all potential solutions.
-        Return the solution if found, or throw an exception if all potential solutions have been exhausted.
-    """
-    (participants, forbidden_groups, forbidden_transactions) = config
-    while True:
-        try:
-            receivers = next(it)
-            solution = [Transaction(participants[i], receivers[i]) for i in range(len(participants))]
-            if not give_to_himself(solution) and no_forbidden_group(solution, forbidden_groups)\
-                    and no_forbidden_transaction(solution, forbidden_transactions):
-                return solution
-        except StopIteration:
-            raise NoMorePotentialSolutionException
 
 
 def get_arguments():
@@ -131,24 +77,88 @@ def load_configuration(config_file_path):
     return participants, forbidden_groups, forbidden_transactions
 
 
+class ChristmasException(Exception):
+    pass
+
+
+class NoMorePotentialSolutionException(Exception):
+    pass
+
+
+@dataclass
+class Transaction:
+    """ Represent a association between a gift giver and a gift receiver """
+    giver: str
+    receiver: str
+
+
+def no_forbidden_group(solution, groups):
+    """ Return true if the solution is compliant with the 'forbidden groups' constraint """
+    for (transaction, group) in itertools.product(solution, groups):
+        if transaction.giver in group and transaction.receiver in group:
+            return False
+    return True
+
+
+def no_forbidden_transaction(solution, forbidden_transactions):
+    """ Return true if the solution is compliant with the 'forbidden transaction' constraint """
+    for (t, f_t) in itertools.product(solution, forbidden_transactions):
+        if t.giver == f_t.giver and t.receiver == f_t.receiver:
+            return False
+    return True
+
+
+def give_to_himself(solution):
+    """ Return true if a participant gives a gift to himself """
+    for transaction in solution:
+        if transaction.giver == transaction.receiver:
+            return True
+    return False
+
+def find_solution(it, config, progress_bar):
+    """
+        Look of a solution compliant with the given constraints, by iterating over all potential solutions.
+        Return the solution if found, or throw an exception if all potential solutions have been exhausted.
+    """
+    (participants, forbidden_groups, forbidden_transactions) = config
+    global i
+    while True:
+        try:
+            progress_bar.update(1)
+            receivers = next(it)
+            solution = [Transaction(participants[i], receivers[i]) for i in range(len(participants))]
+            if not give_to_himself(solution) and no_forbidden_group(solution, forbidden_groups)\
+                    and no_forbidden_transaction(solution, forbidden_transactions):
+                return solution
+        except StopIteration:
+            raise NoMorePotentialSolutionException
+
+
+def get_solutions(year, config):
+    participants = config[0]
+    progress_bar = tqdm(total=math.factorial(len(participants)))
+    logging.info(f'Computing solutions for year {year}...')
+    solutions = []
+    it = itertools.permutations(participants)
+    nb_solutions = 0
+    while True:
+        try:
+            solutions += [find_solution(it, config, progress_bar)]
+            nb_solutions += 1
+        except NoMorePotentialSolutionException:
+            break
+    progress_bar.close()
+    logging.info(f'Year {year} : {nb_solutions} found')
+    return solutions
+
+
 def main():
-    """
-        Assign to each participant another participant to whom he must give a gift,
-        taking into account some constraints given by the configuration
-    """
     try:
         logging.basicConfig(format='%(levelname)s - %(message)s', stream=sys.stdout, level=logging.INFO)
         (rand_seed, config_file_path) = get_arguments()
         config = load_configuration(config_file_path)
 
-        it = itertools.permutations(config[0])
-        try:
-            solution = find_solution(it, config)
-            logging.info("********** SOLUTION FOUND **********")
-            for transaction in solution:
-                logging.info(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
-        except NoMorePotentialSolutionException:
-            logging.error('No solution found')
+        get_solutions(2022, config)
 
     except ChristmasException as ce:
         logging.error(ce)
