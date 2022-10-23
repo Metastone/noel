@@ -11,6 +11,18 @@ A highly advanced piece of software to organize a random gift exchange. Made ini
 - schema (to validate the program configuration)
 - tqdm (for progress bar)
 
+# Usage
+
+```
+usage: noel.py [-h] [--seed SEED]
+
+Organize a gift exchange
+
+options:
+  -h, --help   show this help message and exit
+  --seed SEED  Seed to use for random operations (integer). If not present, the current time is used.
+```
+
 # Output example
 
 ```
