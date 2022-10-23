@@ -3,7 +3,9 @@ import argparse
 import itertools
 import logging
 import math
+import random
 import sys
+from random import seed
 
 from tqdm import tqdm
 from schema import Schema, SchemaError
@@ -115,13 +117,13 @@ def give_to_himself(solution):
             return True
     return False
 
+
 def find_solution(it, config, progress_bar):
     """
         Look of a solution compliant with the given constraints, by iterating over all potential solutions.
         Return the solution if found, or throw an exception if all potential solutions have been exhausted.
     """
     (participants, forbidden_groups, forbidden_transactions) = config
-    global i
     while True:
         try:
             progress_bar.update(1)
@@ -134,10 +136,9 @@ def find_solution(it, config, progress_bar):
             raise NoMorePotentialSolutionException
 
 
-def get_solutions(year, config):
+def get_solutions(config):
     participants = config[0]
-    progress_bar = tqdm(total=math.factorial(len(participants)))
-    logging.info(f'Computing solutions for year {year}...')
+    progress_bar = tqdm(total=math.factorial(len(participants)), leave=False)
     solutions = []
     it = itertools.permutations(participants)
     nb_solutions = 0
@@ -148,7 +149,7 @@ def get_solutions(year, config):
         except NoMorePotentialSolutionException:
             break
     progress_bar.close()
-    logging.info(f'Year {year} : {nb_solutions} found')
+    logging.info(f'{nb_solutions} solutions found')
     return solutions
 
 
@@ -158,7 +159,17 @@ def main():
         (rand_seed, config_file_path) = get_arguments()
         config = load_configuration(config_file_path)
 
-        get_solutions(2022, config)
+        logging.info('Compute all solutions and choose one randomly...')
+        seed(rand_seed)
+        solutions = get_solutions(config)
+        if len(solutions) == 0:
+            raise ChristmasException('No solutions found')
+        solution = random.choice(solutions)
+
+        # Print solution
+        logging.info('********** SOLUTION **********')
+        for transaction in solution:
+            logging.info(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
 
     except ChristmasException as ce:
         logging.error(ce)
