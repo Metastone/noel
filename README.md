@@ -10,3 +10,24 @@ A highly advanced piece of software to organize a random gift exchange. Made ini
 - PyYAML (to load the program configuration)
 - schema (to validate the program configuration)
 - tqdm (for progress bar)
+
+# Output example
+
+```
+$ ./noel.py --seed 1812
+INFO - Using the used-defined seed for random operations : 1812
+INFO - Using the configuration file config.yml
+INFO - Compute all solutions and choose one randomly...
+INFO - 1705 solutions found                                                                                                                   
+INFO - ********** SOLUTION **********
+INFO - Christian  --> Julien
+INFO - Claude     --> Hugo
+INFO - Hugo       --> Christian
+INFO - Isabelle   --> Claude
+INFO - Jean       --> Lucie
+INFO - Julien     --> Nicolas
+INFO - Lucie      --> Jean
+INFO - Marie      --> Isabelle
+INFO - Nicolas    --> Marie
+```
+
