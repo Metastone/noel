@@ -14,7 +14,7 @@ class ChristmasException(Exception):
     pass
 
 
-class BadRandomSolutionException(Exception):
+class NoMorePotentialSolutionException(Exception):
     pass
 
 
@@ -41,25 +41,51 @@ def no_forbidden_transaction(solution, forbidden_transactions):
     return True
 
 
-def try_generate_random_solution(participants):
+def give_to_himself(solution):
+    """ Return true if a participant gives a gift to himself """
+    for transaction in solution:
+        if transaction.giver == transaction.receiver:
+            return True
+    return False
+
+
+def find_solution(it, config):
     """
-    Try to generate a random solution (list of Transaction(giver, receiver)), using a very basic algorithm.
-    It fails by raising an exception if at the end, the last giver can only give a gift to himself
+        Look of a solution compliant with the given constraints, by iterating over all potential solutions.
+        Return the solution if found, or throw an exception if all potential solutions have been exhausted.
     """
-    givers = list(participants)
-    receivers = list(participants)
-    solution = []
-    for giver in givers:
-        potential_receivers = list(receivers)
-        if giver in potential_receivers:
-            potential_receivers.remove(giver)
-        if not potential_receivers:
-            raise BadRandomSolutionException
-        index = randrange(0, len(potential_receivers))
-        receiver = potential_receivers[index]
-        solution += [Transaction(giver, receiver)]
-        receivers.remove(receiver)
-    return solution
+    (participants, forbidden_groups, forbidden_transactions) = config
+    while True:
+        try:
+            receivers = next(it)
+            solution = [Transaction(participants[i], receivers[i]) for i in range(len(participants))]
+            if not give_to_himself(solution) and no_forbidden_group(solution, forbidden_groups)\
+                    and no_forbidden_transaction(solution, forbidden_transactions):
+                return solution
+        except StopIteration:
+            raise NoMorePotentialSolutionException
+
+
+def get_arguments():
+    """ Get the program arguments from command line """
+    parser = argparse.ArgumentParser(description='Organize a gift exchange')
+    parser.add_argument('--seed', type=int, help='Seed to use for random operations (integer).'
+                                                 ' If not present, the current time is used.')
+    args = parser.parse_args()
+
+    # Getting seed to use for random generation
+    if args.seed:
+        logging.info(f'Using the used-defined seed for random operations : {args.seed}')
+        rand_seed = args.seed
+    else:
+        rand_seed = time.time()
+        logging.info(f'Using the current time ({rand_seed}) as a seed for random operations')
+
+    # Getting configuration file path
+    config_file_path = 'config.yml'
+    logging.info(f'Using the configuration file {config_file_path}')
+
+    return rand_seed, config_file_path
 
 
 def spelling_error(name, forbidden_kind):
@@ -105,45 +131,6 @@ def load_configuration(config_file_path):
     return participants, forbidden_groups, forbidden_transactions
 
 
-def computes_solution(rand_seed, config):
-    """ Computes and return a valid solution, if it finds one """
-    (participants, forbidden_groups, forbidden_transactions) = config
-    seed(rand_seed)
-    valid_solution_found = False
-    while not valid_solution_found:
-        try:
-            solution = try_generate_random_solution(participants)
-            if no_forbidden_group(solution, forbidden_groups) \
-                    and no_forbidden_transaction(solution, forbidden_transactions):
-                valid_solution_found = True
-        except BadRandomSolutionException:
-            # random generation failed, we have to try again, nothing to do here
-            pass
-    return solution
-
-
-def get_arguments():
-    """ Get the program arguments from command line """
-    parser = argparse.ArgumentParser(description='Organize a gift exchange')
-    parser.add_argument('--seed', type=int, help='Seed to use for random operations (integer).'
-                                                 ' If not present, the current time is used.')
-    args = parser.parse_args()
-
-    # Getting seed to use for random generation
-    if args.seed:
-        logging.info(f'Using the used-defined seed for random operations : {args.seed}')
-        rand_seed = args.seed
-    else:
-        rand_seed = time.time()
-        logging.info(f'Using the current time ({rand_seed}) as a seed for random operations')
-
-    # Getting configuration file path
-    config_file_path = 'config.yml'
-    logging.info(f'Using the configuration file {config_file_path}')
-
-    return rand_seed, config_file_path
-
-
 def main():
     """
         Assign to each participant another participant to whom he must give a gift,
@@ -153,10 +140,15 @@ def main():
         logging.basicConfig(format='%(levelname)s - %(message)s', stream=sys.stdout, level=logging.INFO)
         (rand_seed, config_file_path) = get_arguments()
         config = load_configuration(config_file_path)
-        solution = computes_solution(rand_seed, config)
-        logging.info("********** SOLUTION FOUND **********")
-        for transaction in solution:
-            logging.info(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
+
+        it = itertools.permutations(config[0])
+        try:
+            solution = find_solution(it, config)
+            logging.info("********** SOLUTION FOUND **********")
+            for transaction in solution:
+                logging.info(f'{transaction.giver.ljust(10, " ")} --> {transaction.receiver}')
+        except NoMorePotentialSolutionException:
+            logging.error('No solution found')
 
     except ChristmasException as ce:
         logging.error(ce)
