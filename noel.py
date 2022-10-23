@@ -62,6 +62,12 @@ def try_generate_random_solution(participants):
     return solution
 
 
+def spelling_error(name, forbidden_kind):
+    """ Helper method used in configuration consistency checking """
+    return ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden {forbidden_kind}, '
+                              f'but {name} is not a participant')
+
+
 def load_configuration(config_file_path):
     """ Load the configuration from a YAML configuration file and return it """
 
@@ -88,12 +94,12 @@ def load_configuration(config_file_path):
     for group in forbidden_groups:
         for name in group:
             if name not in participants:
-                raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden groups, '
-                                         f'but {name} is not a participant')
+                raise spelling_error(name, 'groups')
     for transaction in forbidden_transactions:
-        if transaction.giver not in participants or transaction.receiver not in participants:
-            raise ChristmasException(f'Bad configuration : {name} is mentioned in the forbidden transactions, '
-                                     f'but {name} is not a participant')
+        if transaction.giver not in participants:
+            raise spelling_error(transaction.giver, 'transactions')
+        if transaction.receiver not in participants:
+            raise spelling_error(transaction.receiver, 'transactions')
 
     # If we reach this point, the configuration is valid
     return participants, forbidden_groups, forbidden_transactions
